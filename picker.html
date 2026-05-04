@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="initial-scale=1.0">
+<title>Picker</title>
+<style>
+body {
+    background:#303030;
+    color:#c4c4c4;
+    font-family:tahoma, sans-serif;
+    font-size:10pt;
+    margin:0;
+    padding:10px;
+}
+
+a:link, a:visited {
+    color:#008;
+    font-weight:bold;
+    text-decoration:none;
+}
+
+a:active, a:hover {
+    color:#ACF;
+}
+
+.info {
+    font-weight:bold;
+}
+
+button {
+    font-family:inherit;
+    cursor:pointer;
+    border:0;
+    border-radius:3px;
+    padding:0.3em 0.5em;
+    background:#CCC;
+    color:#000;
+}
+
+button:hover {
+    background:#DDD;
+}
+
+button.disabled {
+    background:#DDD;
+    color:#888;
+    cursor:not-allowed;
+}
+
+button.disabled:hover {
+    background:#DDD;
+}
+
+#container {
+    position:relative;
+    margin-left:-10px;
+    margin-right:-10px;
+    padding:10px;
+    overflow:hidden;
+}
+
+@media (min-width:1024px) {
+    /* Put the found favorites beside the picking div when the window is sufficiently large */
+    #picking {
+        float:left;
+        width:636px;
+    }
+
+    #secondary {
+        margin-left:646px;
+    }
+}
+
+@media (min-width:1300px) {
+    /* Once we get to the point where 636px is less than half of the width of the screen, make the picking div just take up half */
+    #picking {
+        width:50%;
+    }
+
+    #secondary {
+        margin-left:51%;
+    }
+}
+
+#pick {
+    background:#106112;
+    color:#FFF;
+    font-size:larger;
+    font-weight:bold;
+    width:6em;
+    border-radius:5px;
+    margin-right:10px;
+}
+
+#pick.disabled {
+    background:#114212;
+}
+
+#pick:hover {
+    background:#1b751d;
+}
+
+.item-list {
+    padding:0;
+    list-style-type:none;
+    line-height:100px;
+}
+
+.item-list li {
+    margin:0;
+    display:inline-block;
+    height:100px;
+    width:100px;
+    line-height:100px;
+    border:3px solid transparent;
+    text-align:center;
+    position:relative;
+    vertical-align:top;
+    overflow:hidden;
+    border-radius:100%;
+    background:#474747;
+    color:#000;
+}
+
+.item-list li img {
+    vertical-align:middle;
+    max-height:100%;
+    max-width:100%;
+}
+
+.item-list li span {
+    display:inline-block;
+    vertical-align:middle;
+    line-height:1.2;
+}
+
+@media (max-width:636px) {
+    .item-list {
+        line-height:75px;
+    }
+
+    .item-list li {
+        line-height:75px;
+        height:75px;
+        width:75px;
+    }
+}
+
+@media (max-width:423px) {
+    .item-list {
+        line-height:50px;
+    }
+
+    .item-list li {
+        line-height:50px;
+        height:50px;
+        width:50px;
+    }
+}
+
+#evaluating li {
+    cursor:pointer;
+}
+
+#favorites li {
+    cursor:move;
+}
+
+.item-list li:hover {
+    background:#CDF;
+}
+
+.item-list.sorting li:hover {
+    background:#F7F7F7;
+}
+
+#evaluating li.selected {
+    border:3px solid #7AC;
+}
+
+#evaluating, #buttons {
+    text-align:center;
+    margin:auto;
+}
+
+#evaluating li.notice {
+    width:auto;
+    height:auto;
+    max-width:260px;
+    margin:auto;
+    background:#F7F7F7;
+    border-radius:10px;
+    padding:30px 30px;
+    color:#000;
+    text-align:center;
+    line-height:1.4;
+    cursor:auto;
+    font-size:10pt;
+}
+
+#buttons {
+    margin-top:30px;
+    position:relative;
+    z-index:3;
+}
+</style>
+</head>
+<body>
+<h1>Favorite Fortnite Outfit Picker: Dino Vers.</h1>
+
+<p>Choose your favorite outfits in each group from the selection provided by Dino</p>
+Code and files based upon The Dragonfly Cave's <a href="https://www.dragonflycave.com/favorite.html">Favorite Pokemon Picker</a></p>
+(Last updated MAY2026/CH7SN2)</p>
+<div id="container">
+
+<div id="picking">
+<ul id="evaluating" class="item-list">
+</ul>
+
+<p id="buttons"><button id="pick">Pick</button> <button id="pass">Pass</button> <button id="undo">Undo</button> <button id="redo">Redo</button></p>
+</div> <button id="reset">Reset</button>
+
+<div id="secondary">
+<h2>Found favorites</h2>
+
+<ol id="favorites" class="item-list">
+</ol>
+</div>
+</div>
+<script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+<script src="picker.js"></script>
+<script src="picker-ui.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.7.0/Sortable.min.js"></script>
+<script>
+'use strict';
+
+var items = [
+    {id: 'eon', name: 'Eon', image: 'image/eon.webp'},
+    {id: 'godzilla', name: 'Godzilla Evolved', image: 'image/godzilla.webp'},
+    {id: 'omega', name: 'Omega', image: 'image/omega.webp'},
+	{id: 'bluesquire', name: 'Blue Squire', image: 'image/bluesquire.webp'},
+    {id: 'carbide', name: 'Carbide', image: 'image/carbide.webp'},
+    {id: 'criterion', name: 'Criterion', image: 'image/criterion.webp'},
+	{id: 'dangerzone', name: 'Danger Zone', image: 'image/dangerzone.webp'},
+    {id: 'drakon', name: 'Drakon Steel Hybrid', image: 'image/drakon.webp'},
+    {id: 'elf', name: 'Codename E.L.F.', image: 'image/elf.webp'},
+	{id: 'eternal', name: 'Eternal Voyager', image: 'image/eternal.webp'},
+    {id: 'farmersteel', name: 'Farmer Steel', image: 'image/farmersteel.webp'},
+    {id: 'foundation', name: 'The Foundation', image: 'image/foundation.webp'},
+	{id: 'jones', name: 'Agent Jones', image: 'image/jones.webp'},
+    {id: 'mechagodzilla', name: 'Mechagodzilla', image: 'image/mechagodzilla.png'},
+    {id: 'midas', name: 'Midas', image: 'image/midas.webp'},
+	{id: 'oblivion', name: 'Oblivion', image: 'image/oblivion.webp'},
+    {id: 'omegaalpha', name: 'O.M.E.G.A. Suit Alpha', image: 'image/omegaalpha.webp'},
+    {id: 'omegaknight', name: 'Omega Knight', image: 'image/omegaknight.webp'},
+	{id: 'omegarok', name: 'Omegarok', image: 'image/omegarok.webp'},
+    {id: 'prime', name: 'Optimus Prime', image: 'image/prime.webp'},
+    {id: 'rex', name: 'Rex', image: 'image/rex.webp'},
+	{id: 'synapse', name: 'Synapse', image: 'image/synapse.webp'},
+    {id: 'ultimaknight', name: 'Ultima Knight', image: 'image/ultimaknight.webp'},
+    {id: 'venom', name: 'Venom', image: 'image/venom.webp'},
+	{id: 'visitor', name: 'The Visitor', image: 'image/visitor.webp'},
+	{id: '8ball', name: '8-Ball vs Scratch', image: 'image/8ball.webp'},
+	{id: 'ageless', name: 'The Ageless', image: 'image/ageless.webp'},
+	{id: 'aim', name: 'A.I.M.', image: 'image/aim.webp'},
+	{id: 'carver', name: 'Ultima Carver', image: 'image/carver.webp'},
+	{id: 'chief', name: 'Master Chief', image: 'image/chief.png'},
+	{id: 'davyjones', name: 'Davy Jones', image: 'image/davyjones.webp'},
+	{id: 'doom', name: 'DOOM', image: 'image/doom.webp'},
+	{id: 'eco', name: 'Eco', image: 'image/eco.webp'},
+	{id: 'eddiebrock', name: 'Eddie Brock', image: 'image/eddiebrock.png'},
+	{id: 'fusion', name: 'Fusion', image: 'image/fusion.webp'},
+	{id: 'haxsaur', name: 'Haxsaur', image: 'image/haxsaur.webp'},
+	{id: 'iceking', name: 'The Ice King', image: 'image/iceking.webp'},
+	{id: 'ironman', name: 'Iron Man', image: 'image/ironman.png'},
+	{id: 'ironmanmcu', name: 'Iron Man (MCU)', image: 'image/ironmanmcu.png'},
+	{id: 'ironmanult', name: 'Iron Man MK 45', image: 'image/ironmanult.webp'},
+	{id: 'keleritas', name: 'Keleritas', image: 'image/keleritas.webp'},
+	{id: 'moff', name: 'Moff Gideon', image: 'image/moff.webp'},
+	{id: 'mystique', name: 'Mystique', image: 'image/mystique.webp'},
+	{id: 'omniman', name: 'Omni-Man', image: 'image/omniman.webp'},
+	{id: 'prisoner', name: 'The Prisoner', image: 'image/prisoner.webp'},
+	{id: 'r3x', name: 'Mecha R3x', image: 'image/r3x.webp'},
+	{id: 'rickgrimes', name: 'Rick Grimes', image: 'image/rickgrimes.webp'},
+	{id: 'roguespider', name: 'Rogue Spider Knight', image: 'image/roguespider.webp'},
+	{id: 'royalebomber', name: 'Royale Bomber', image: 'image/royalebomber.webp'},
+	{id: 'saura', name: 'Saura', image: 'image/saura.webp'},
+	{id: 'sirraven', name: 'Sir Raven', image: 'image/sirraven.png'},
+	{id: 'spectraknight', name: 'Spectra Knight', image: 'image/spectraknight.webp'},
+	{id: 'thanos', name: 'Thanos', image: 'image/thanos.webp'},
+	{id: 'tonystark', name: 'Tony Stark', image: 'image/tonystark.webp'},
+	{id: 'toxicfusion', name: 'Toxic Fusion', image: 'image/toxicfusion.png'},
+	{id: 'tricera', name: 'Tricera Ops', image: 'image/tricera.webp'},
+	{id: 'xlord', name: 'X-Lord', image: 'image/xlord.webp'},
+	{id: '1ball', name: '1-Ball', image: 'image/1ball.webp'},
+	{id: 'adidasgirl', name: 'Iconica Prime', image: 'image/adidasgirl.png'},
+	{id: 'allen', name: 'Allen the Alien', image: 'image/allen.png'},
+	{id: 'astro', name: 'Astro Jack', image: 'image/astro.webp'},
+	{id: 'baymax', name: 'Hero Baymax', image: 'image/baymax.webp'},
+	{id: 'blackknight2', name: 'Knight Conqueror', image: 'image/blackknight2.webp'},
+	{id: 'boxxer', name: 'Boxer', image: 'image/boxxer.webp'},
+	{id: 'caper', name: 'Caper', image: 'image/caper.webp'},
+	{id: 'daigoevil', name: 'Mask Maker Daigo', image: 'image/daigoevil.png'},
+	{id: 'darkvoyager2', name: 'Dark Voyager (Reality Redacted)', image: 'image/darkvoyager2.webp'},
+	{id: 'daryl', name: 'Daryl Dixon', image: 'image/daryl.webp'},
+	{id: 'defaultjones2', name: 'Jonesy the Secondst', image: 'image/defaultjones2.webp'},
+	{id: 'dill', name: 'Big Dill', image: 'image/dill.webp'},
+	{id: 'doof', name: 'Dr. Doofensmirtz', image: 'image/doof.webp'},
+	{id: 'drift2', name: 'Riftreaver Drift', image: 'image/drift2.webp'},
+	{id: 'elitedaigo', name: 'Elite Daigo', image: 'image/elitedaigo.webp'},
+	{id: 'evilknight', name: 'The Dark Maw', image: 'image/evilknight.webp'},
+	{id: 'finn', name: 'Finn the Human', image: 'image/finn.webp'},
+	{id: 'football', name: 'Blitz Brigade', image: 'image/football.png'},
+	{id: 'foundation2', name: 'The Foundation (Reforged)', image: 'image/foundation2.webp'},
+	{id: 'glitch', name: 'Glitch', image: 'image/glitch.webp'},
+	{id: 'gnarly', name: 'Gnarly Charlie', image: 'image/gnarly.webp'},
+	{id: 'greenranger', name: 'Green Ranger', image: 'image/greenranger.png'},
+	{id: 'grevious', name: 'General Greivous', image: 'image/grevious.webp'},
+	{id: 'halosoldier', name: 'UNSC Spartan', image: 'image/halosoldier.webp'},
+	{id: 'iceking2', name: 'Exalted Ice King', image: 'image/iceking2.webp'},
+	{id: 'icekingAT', name: 'Ice King', image: 'image/icekingAT.webp'},
+	{id: 'invincible', name: 'Invincible', image: 'image/invincible.webp'},
+	{id: 'jake', name: 'Jake the Dog', image: 'image/jake.png'},
+	{id: 'kane', name: 'Kane', image: 'image/kane.webp'},
+	{id: 'kong', name: 'Kong', image: 'image/kong.png'},
+	{id: 'lastpeel', name: 'The Final Peel', image: 'image/lastpeel.webp'},
+	{id: 'lightrider', name: 'Lightrider', image: 'image/lightrider.png'},
+	{id: 'luckyrider', name: 'Lucky Rider', image: 'image/luckyrider.webp'},
+	{id: 'mando', name: 'Mandalorian Warrior', image: 'image/mando.webp'},
+	{id: 'meowdas', name: 'Meowdas', image: 'image/meowdas.webp'},
+	{id: 'mintyoro', name: 'Minty Oro', image: 'image/mintyoro.png'},
+	{id: 'negan', name: 'Negan', image: 'image/negan.png'},
+	{id: 'ninjahope', name: 'Shadow Blade Hope', image: 'image/ninjahope.webp'},
+	{id: 'order2', name: 'The Order (Reforged)', image: 'image/order2.webp'},
+	{id: 'oro2', name: 'Rebel Oro', image: 'image/oro2.webp'},
+	{id: 'outlawmidas', name: 'Outlaw Midas', image: 'image/outlawmidas.webp'},
+	{id: 'oxr', name: 'Lt. Ripp Slade', image: 'image/oxr.png'},
+	{id: 'perry', name: 'Buff Perry', image: 'image/perry.webp'},
+	{id: 'playstationgirl', name: 'Trilogy', image: 'image/playstationgirl.png'},
+	{id: 'santaOG', name: 'Lt. Winter', image: 'image/santaOG.webp'},
+	{id: 'scientistgreen', name: 'Doctor Malachite', image: 'image/scientistgreen.webp'},
+	{id: 'skull2', name: 'Skull Commander', image: 'image/skull2.webp'},
+	{id: 'skulldroid', name: 'Skulldroid', image: 'image/skulldroid.png'},
+	{id: 'skullsmoke', name: 'Viridion', image: 'image/skullsmoke.png'},
+	{id: 'slurpentine', name: 'Slurpentine', image: 'image/slurpentine.webp'},
+	{id: 'smokegirl', name: 'Dr. Bleeker', image: 'image/smokegirl.webp'},
+	{id: 'sparkle3', name: 'Sparkle Diva', image: 'image/sparkle3.webp'},
+	{id: 'svenja', name: 'Svenja', image: 'image/svenja.webp'},
+	{id: 'visitor2', name: 'The Visitor (Reality Unknown)', image: 'image/visitor2.webp'},
+	{id: 'wolf2', name: 'War Wolf Dire', image: 'image/wolf2.webp'},
+	{id: 'agelessgirl', name: 'Odyssey', image: 'image/agelessgirl.webp'},
+	{id: 'ares', name: 'Ares', image: 'image/ares.webp'},
+	{id: 'axion', name: 'Axion Sentinel', image: 'image/axion.webp'},
+	{id: 'battlebus', name: 'Battlebus', image: 'image/battlebus.webp'},
+	{id: 'bender', name: 'Bender Bending Rodríguez', image: 'image/bender.webp'},
+	{id: 'bossobsidian', name: 'Boss Obsidian', image: 'image/bossobsidian.webp'},
+	{id: 'briteraider', name: 'Brite Raider', image: 'image/briteraider.webp'},
+	{id: 'captainjones', name: 'Captain Jones', image: 'image/captainjones.webp'},
+	{id: 'cell', name: 'Cell', image: 'image/cell.webp'},
+	{id: 'cerberus', name: 'Cerberus', image: 'image/cerberus.webp'},
+	{id: 'fireloveranger', name: 'Heartbreak Ranger', image: 'image/fireloveranger.webp'},
+	{id: 'giannis', name: 'Giannis Antetokounmpo', image: 'image/giannis.webp'},
+	{id: 'greekmidas', name: 'Ascendant Midas', image: 'image/greekmidas.webp'},
+	{id: 'hades', name: 'Hades', image: 'image/hades.png'},
+	{id: 'heroichope', name: 'Heroic Hope', image: 'image/heroichope.png'},
+	{id: 'horizon', name: 'Horizon', image: 'image/horizon.webp'},
+	{id: 'jitter', name: 'Jittershock', image: 'image/jitter.webp'},
+	{id: 'kado', name: 'Kado Thorne', image: 'image/kado.webp'},
+	{id: 'loki', name: 'Loki, God of Stories', image: 'image/loki.webp'},
+	{id: 'magneto', name: 'Wastelander Magneto', image: 'image/magneto.webp'},
+	{id: 'medusa', name: 'Medusa', image: 'image/medusa.webp'},
+	{id: 'megalodon', name: 'Megalo Don', image: 'image/megalodon.webp'},
+	{id: 'mizuki', name: 'Mizuki', image: 'image/mizuki.webp'},
+	{id: 'montague', name: 'Montague', image: 'image/montague.webp'},
+	{id: 'mysterio', name: 'Mysterio', image: 'image/mysterio.png'},
+	{id: 'mystica', name: 'Mystica', image: 'image/mystica.webp'},
+	{id: 'polus', name: 'Polus', image: 'image/polus.webp'},
+	{id: 'posiedon', name: 'Poseidon', image: 'image/posiedon.webp'},
+	{id: 'relik', name: 'Relik', image: 'image/relik.webp'},
+	{id: 'renzo', name: 'Renzo the Destroyer', image: 'image/renzo.webp'},
+	{id: 'shevenom', name: 'She-Venom', image: 'image/shevenom.webp'},
+	{id: 'shredder', name: 'Shredder', image: 'image/shredder.webp'},
+	{id: 'singal', name: 'Signal', image: 'image/singal.png'},
+	{id: 'spiderman2099', name: 'Spider-Man 2099', image: 'image/spiderman2099.webp'},
+	{id: 'stray', name: 'Stray', image: 'image/stray.webp'},
+	{id: 'supershredder', name: 'Super Shredder', image: 'image/supershredder.png'},
+	{id: 'talus', name: 'Core Knight Talus', image: 'image/talus.webp'},
+	{id: 'thunder', name: 'Thunder', image: 'image/thunder.webp'},
+	{id: 'titan', name: 'Titan', image: 'image/titan.webp'},
+	{id: 'vengencejones', name: 'Vengance Jones', image: 'image/vengencejones.webp'},
+	{id: 'warmachine', name: 'War Machine', image: 'image/warmachine.webp'},
+	{id: 'wastelanderdummy', name: 'Wastelander Dummy', image: 'image/wastelanderdummy.webp'},
+	{id: 'zeus', name: 'Zeus', image: 'image/zeus.webp'},
+	{id: 'adeline', name: 'Adeline', image: 'image/adeline.webp'},
+	{id: 'alia', name: 'Ali-A', image: 'image/alia.webp'},
+	{id: 'balvin', name: 'J Balvin', image: 'image/balvin.webp'},
+	{id: 'balvinredux', name: 'J Balvin Redux', image: 'image/balvinredux.png'},
+	{id: 'beastboy', name: 'Beast Boy', image: 'image/beastboy.webp'},
+	{id: 'boba', name: 'Boba Fett', image: 'image/boba.webp'},
+	{id: 'burningwolf', name: 'The Burning Wolf', image: 'image/burningwolf.webp'},
+	{id: 'cammy', name: 'Cammy', image: 'image/cammy.webp'},
+	{id: 'carnage', name: 'Carnage', image: 'image/carnage.webp'},
+	{id: 'cubequeen', name: 'The Cube Queen', image: 'image/cubequeen.webp'},
+	{id: 'default', name: 'Jonesy the First', image: 'image/default.webp'},
+	{id: 'duckbot', name: 'Megg', image: 'image/duckbot.webp'},
+	{id: 'eternalwanderer', name: 'Eternal Wanderer', image: 'image/eternalwanderer.webp'},
+	{id: 'galaxygirl', name: 'Galaxy Grappler', image: 'image/galaxygirl.webp'},
+	{id: 'gunnar', name: 'Gunnar', image: 'image/gunnar.webp'},
+	{id: 'harlowe', name: 'Harlowe', image: 'image/harlowe.webp'},
+	{id: 'herald', name: 'The Herald', image: 'image/herald.webp'},
+	{id: 'imagined', name: 'The Imagined', image: 'image/imagined.webp'},
+	{id: 'indianajones', name: 'Indiana Jones', image: 'image/indianajones.webp'},
+	{id: 'ironmanzero', name: 'Iron Man Zero', image: 'image/ironmanzero.png'},
+	{id: 'joey', name: 'Joey', image: 'image/joey.webp'},
+	{id: 'joltara', name: 'Joltara', image: 'image/joltara.webp'},
+	{id: 'kymera', name: 'Kymera', image: 'image/kymera.webp'},
+	{id: 'majormancake', name: 'Major Mancake', image: 'image/majormancake.webp'},
+	{id: 'mancake', name: 'Mancake', image: 'image/mancake.webp'},
+	{id: 'mechastrikecommander', name: 'Mecha Strike Commander', image: 'image/mechastrikecommander.png'},
+	{id: 'mintyaura', name: 'Fresh Aura', image: 'image/mintyaura.png'},
+	{id: 'mintybrite', name: 'Minty Bomber', image: 'image/mintybrite.webp'},
+	{id: 'moltenrag', name: 'Molten Ragnarok', image: 'image/moltenrag.webp'},
+	{id: 'order', name: 'The Order', image: 'image/order.webp'},
+	{id: 'origin', name: 'The Origin', image: 'image/origin.webp'},
+	{id: 'paradigm2', name: 'Paradigm (Reality-659)', image: 'image/paradigm2.png'},
+	{id: 'popcorn', name: 'Kernel Poppy', image: 'image/popcorn.png'},
+	{id: 'prowler', name: 'The Prowler', image: 'image/prowler.webp'},
+	{id: 'ravenbot', name: 'Grave Feather', image: 'image/ravenbot.webp'},
+	{id: 'rogue', name: 'Rogue', image: 'image/rogue.webp'},
+	{id: 'scrapsamurai', name: 'Samurai Scrapper', image: 'image/scrapsamurai.webp'},
+	{id: 'sevenfighter', name: 'Mecha Strike Navigator', image: 'image/sevenfighter.webp'},
+	{id: 'slone', name: 'Doctor Slone', image: 'image/slone.webp'},
+	{id: 'snap', name: 'Snap', image: 'image/snap.webp'},
+	{id: 'southpaw', name: 'Southpaw', image: 'image/southpaw.png'},
+	{id: 'spiderman', name: 'Spider-Man', image: 'image/spiderman.webp'},
+	{id: 'spire', name: 'Spire Immortal', image: 'image/spire.webp'},
+	{id: 'spiregirl', name: 'Spire Assassin', image: 'image/spiregirl.webp'},
+	{id: 'stormfarer', name: 'Stormfarer', image: 'image/stormfarer.webp'},
+	{id: 't100', name: 'T-800', image: 'image/t100.webp'},
+	{id: 'trespasseelite', name: 'Trespasser Elite', image: 'image/trespasseelite.webp'},
+	{id: 'trespasser2', name: 'Trespasser Defector', image: 'image/trespasser2.webp'},
+	{id: 'zyg', name: 'Zyg', image: 'image/zyg.webp'},
+	{id: 'armytoy', name: 'Plastic Patroller', image: 'image/armytoy.webp'},
+	{id: 'astrogirl', name: 'Astro Assassin', image: 'image/astrogirl.webp'},
+	{id: 'bigmouth', name: 'Big Mouth', image: 'image/bigmouth.png'},
+	{id: 'bronto', name: 'Bronto', image: 'image/bronto.png'},
+	{id: 'brutegirl', name: 'B.R.U.T.E. Gunner', image: 'image/brutegirl.webp'},
+	{id: 'bunker', name: 'Bunker Jonesy', image: 'image/bunker.webp'},
+	{id: 'catalyst', name: 'Catalyst', image: 'image/catalyst.webp'},
+	{id: 'chance', name: 'Chance', image: 'image/chance.webp'},
+	{id: 'chocobunny', name: 'Bun Bun', image: 'image/chocobunny.png'},
+	{id: 'chuggus', name: 'Big Chuggus', image: 'image/chuggus.webp'},
+	{id: 'cyclo', name: 'Cyclo', image: 'image/cyclo.webp'},
+	{id: 'demi', name: 'Demi', image: 'image/demi.webp'},
+	{id: 'demo', name: 'Demogorgon', image: 'image/demo.webp'},
+	{id: 'devourer', name: 'The Devourer', image: 'image/devourer.webp'},
+	{id: 'dummy', name: 'Dummy', image: 'image/dummy.webp'},
+	{id: 'eternalknight', name: 'Eternal Knight', image: 'image/eternalknight.webp'},
+	{id: 'galaxia', name: 'Galaxia', image: 'image/galaxia.webp'},
+	{id: 'giller', name: 'Contract Giller', image: 'image/giller.webp'},
+	{id: 'grit', name: 'Grit', image: 'image/grit.webp'},
+	{id: 'jules', name: 'Jules', image: 'image/jules.webp'},
+	{id: 'kit', name: 'Kit', image: 'image/kit.webp'},
+	{id: 'llamalight', name: 'Llion', image: 'image/llamalight.webp'},
+	{id: 'marina', name: 'Mariana', image: 'image/marina.webp'},
+	{id: 'mecha', name: 'Mecha Team Leader', image: 'image/mecha.webp'},
+	{id: 'monks', name: 'Monks', image: 'image/monks.webp'},
+	{id: 'ninja', name: 'Ninja', image: 'image/ninja.webp'},
+	{id: 'opressor', name: 'Oppressor', image: 'image/opressor.webp'},
+	{id: 'paradigm', name: 'The Paradigm', image: 'image/paradigm.webp'},
+	{id: 'parpatroller', name: 'Par Patroller', image: 'image/parpatroller.webp'},
+	{id: 'rippley', name: 'Rippley vs Sludge', image: 'image/rippley.webp'},
+	{id: 'robosensei', name: 'Copper Wasp', image: 'image/robosensei.webp'},
+	{id: 'rox', name: 'Rox', image: 'image/rox.webp'},
+	{id: 'scientist', name: 'The Scientist', image: 'image/scientist.webp'},
+	{id: 'scuba', name: 'Scuba Jonesy', image: 'image/scuba.webp'},
+	{id: 'sentinel', name: 'Sentinel', image: 'image/sentinel.webp'},
+	{id: 'shehulk', name: 'Jennifer Walters', image: 'image/shehulk.webp'},
+	{id: 'singularity', name: 'Singularity', image: 'image/singularity.webp'},
+	{id: 'slurpleviathan', name: 'Slurp Leviathan', image: 'image/slurpleviathan.webp'},
+	{id: 'snake', name: 'Sklaxis', image: 'image/snake.webp'},
+	{id: 'snowglobe', name: 'Globe Shaker', image: 'image/snowglobe.png'},
+	{id: 'sparklesupreme', name: 'Sparkle Supreme', image: 'image/sparklesupreme.webp'},
+	{id: 'toxin', name: 'Remedy vs Toxin', image: 'image/toxin.webp'},
+	{id: 'vendetta', name: 'Vendetta', image: 'image/vendetta.webp'},
+	{id: 'wolverine', name: 'Wolverine', image: 'image/wolverine.png'},
+	{id: 'yond3r', name: 'Yond3r', image: 'image/yond3r.webp'},
+	{id: 'zero', name: 'Zero', image: 'image/zero.webp'},
+	{id: 'balloon', name: 'Bendie', image: 'image/balloon.webp'},
+	{id: 'blackheart', name: 'Blackheart', image: 'image/blackheart.webp'},
+	{id: 'bomb', name: 'Splode', image: 'image/bomb.webp'},
+	{id: 'calamity', name: 'Calamity', image: 'image/calamity.webp'},
+	{id: 'dire', name: 'Dire', image: 'image/dire.webp'},
+	{id: 'fishstick', name: 'Fishstick', image: 'image/fishstick.webp'},
+	{id: 'giddyup', name: 'Giddy-up', image: 'image/giddyup.webp'},
+	{id: 'greenps', name: 'Tech Ops', image: 'image/greenps.webp'},
+	{id: 'hollowhead', name: 'Hollowhead', image: 'image/hollowhead.webp'},
+	{id: 'hybrid', name: 'Hybrid', image: 'image/hybrid.webp'},
+	{id: 'kitbash', name: 'Kitbash', image: 'image/kitbash.webp'},
+	{id: 'lavahound', name: 'Molten Battle Hound', image: 'image/lavahound.webp'},
+	{id: 'lynx', name: 'Lynx', image: 'image/lynx.webp'},
+	{id: 'masterkey', name: 'Master Key', image: 'image/masterkey.webp'},
+	{id: 'mesmer', name: 'Mezmer', image: 'image/mesmer.webp'},
+	{id: 'peely', name: 'Peely', image: 'image/peely.webp'},
+	{id: 'playstationguy', name: 'Carbon Commando', image: 'image/playstationguy.webp'},
+	{id: 'prickly', name: 'Prickly Patroller', image: 'image/prickly.webp'},
+	{id: 'robodude', name: 'Revolt', image: 'image/robodude.webp'},
+	{id: 'ruin', name: 'Ruin', image: 'image/ruin.webp'},
+	{id: 'sgtwinter', name: 'Sgt. Winter', image: 'image/sgtwinter.webp'},
+	{id: 'strawops', name: 'Straw Ops', image: 'image/strawops.webp'},
+	{id: 'waypoint', name: 'Waypoint', image: 'image/waypoint.webp'},
+	{id: 'yonder', name: 'DJ Yonder', image: 'image/yonder.webp'},
+	{id: 'archtype', name: '', image: 'image/archtype.webp'},
+	{id: 'astronaut', name: '', image: 'image/astronaut.webp'},
+	{id: 'battlehound', name: '', image: 'image/battlehound.webp'},
+	{id: 'beefboss', name: '', image: 'image/beefboss.webp'},
+	{id: 'blackknight', name: '', image: 'image/blackknight.webp'},
+	{id: 'britebomber', name: '', image: 'image/britebomber.webp'},
+	{id: 'darkvoyager', name: '', image: 'image/darkvoyager.webp'},
+	{id: 'drift', name: '', image: 'image/drift.webp'},
+	{id: 'eliteagent', name: '', image: 'image/eliteagent.webp'},
+	{id: 'galaxy', name: '', image: 'image/galaxy.webp'},
+	{id: 'garrison', name: '', image: 'image/garrison.webp'},
+	{id: 'junglescout', name: '', image: 'image/junglescout.webp'},
+	{id: 'leviathan', name: '', image: 'image/leviathan.webp'},
+	{id: 'ragnarok', name: '', image: 'image/ragnarok.webp'},
+	{id: 'raptor', name: '', image: 'image/raptor.webp'},
+	{id: 'ravage', name: '', image: 'image/ravage.webp'},
+	{id: 'raven', name: '', image: 'image/raven.webp'},
+	{id: 'reaper', name: '', image: 'image/reaper.webp'},
+	{id: 'redknight', name: '', image: 'image/redknight.webp'},
+	{id: 'rogueagent', name: '', image: 'image/rogueagent.webp'},
+	{id: 'rustlord', name: '', image: 'image/rustlord.webp'},
+	{id: 'skull', name: '', image: 'image/skull.webp'},
+	{id: 'sparkle', name: '', image: 'image/sparkle.webp'},
+	{id: 'teknique', name: '', image: 'image/teknique.webp'},
+	{id: 'tomato', name: '', image: 'image/tomato.webp'},
+	{id: 'wildcard', name: '', image: 'image/wildcard.webp'}
+	
+];
+
+var myPicker = new picker.Picker({
+    items: items,
+    localStorageKey: 'picker-state'
+});
+
+var pickerUI = new PickerUI(myPicker, {
+    elements: {
+        pick: "#pick",
+        pass: "#pass",
+        undo: "#undo",
+        redo: "#redo",
+		reset: "#reset",
+        evaluating: "#evaluating",
+        favorites: "#favorites"
+    }
+});
+
+pickerUI.initialize();
+
+/* Sortable favorites - you can safely remove this, and the Sortable.min.js script, if you don't want to be able to sort your favorite list. */
+var sortable = new Sortable(pickerUI.elem.favorites.get(0), {
+    draggable: '.item',
+    animation: 100,
+    onStart: function() {
+        pickerUI.elem.favorites.addClass("sorting");
+    },
+    onEnd: function() {
+        pickerUI.elem.favorites.removeClass("sorting");
+    },
+    onUpdate: function() {
+        myPicker.setFavorites(pickerUI.elem.favorites.children().map(function() {
+            return pickerUI.getItem(this);
+        }).get());
+        pickerUI.update(true);
+    }
+});
+/* End sortable favorites */
+</script>
+</body>
+</html>
